@@ -26,3 +26,4 @@ jobs:
           YX_RECEIVER_EMAIL: ${{ secrets.YX_RECEIVER_EMAIL }}
           YX_RECORD_DATE: ${{ secrets.YX_RECORD_DATE }}
         run: python medicine_reminder.py
+
