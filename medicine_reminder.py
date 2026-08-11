@@ -33,7 +33,7 @@ ALERT_THRESHOLD = 7
 # 所有药品共用同一个 record_date（从环境变量 YX_RECORD_DATE 读取）
 # 买了新药后，只需在青龙环境变量中修改 YX_RECORD_DATE 为今天的日期
 MEDICINES = [
-    {"name": "盐酸沙格雷酯片",     "initial_days": 60, "usage": "每日3次，一次1片", "note": ""},
+    {"name": "盐酸沙格雷酯片",     "initial_days": 6, "usage": "每日3次，一次1片", "note": ""},
     {"name": "阿司匹林肠溶片",     "initial_days": 60, "usage": "每日1次，一次1片", "note": "刺激胃部，导致咳嗽，备点胃药"},
     {"name": "阿托伐汀钙片",       "initial_days": 60, "usage": "每日1次，一次1片", "note": ""},
     {"name": "阿卡波糖片",         "initial_days": 60, "usage": "每日3次，一次1片", "note": "饭前吃"},
