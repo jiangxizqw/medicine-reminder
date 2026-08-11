@@ -25,9 +25,9 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime, date
 
 # ==================== 用户配置区域 ====================
-
+RECORD_DATE = "2026-08-17"   # 药品记录时间
 # 提醒阈值：剩余天数小于此值时发送邮件
-ALERT_THRESHOLD = 7
+ALERT_THRESHOLD = 10
 
 # 药品数据（请根据实际情况修改）
 # 所有药品共用同一个 record_date（从环境变量 YX_RECORD_DATE 读取）
