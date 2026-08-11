@@ -2,8 +2,8 @@ name: Medicine Reminder
 
 on:
   schedule:
-    # 每天北京时间 9:00 执行（UTC 1:00）
-    - cron: '0 1 * * *'
+    # 每天北京时间 10:00 执行（UTC 1:00）
+    - cron: '0 2 * * *'
   workflow_dispatch:
 
 jobs:
