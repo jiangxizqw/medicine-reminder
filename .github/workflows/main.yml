@@ -1,17 +1,30 @@
-name: daily
+name: Medicine Reminder
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    # 每天北京时间 9:00 执行（UTC 1:00）
+    - cron: '0 1 * * *'
+  workflow_dispatch:
 
 jobs:
-  run:
+  reminder:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - run: python main.py
+      
+      - name: Run medicine reminder
+        env:
+          YX_SENDER_EMAIL: ${{ secrets.YX_SENDER_EMAIL }}
+          YX_SENDER_PASSWORD: ${{ secrets.YX_SENDER_PASSWORD }}
+          YX_RECEIVER_EMAIL: ${{ secrets.YX_RECEIVER_EMAIL }}
+          YX_RECORD_DATE: ${{ secrets.YX_RECORD_DATE }}
+          YX_SMTP_SERVER: ${{ secrets.YX_SMTP_SERVER }}
+          YX_SMTP_PORT: ${{ secrets.YX_SMTP_PORT }}
+        run: python medicine_reminder.py
