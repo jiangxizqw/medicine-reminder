@@ -9,23 +9,29 @@ on:
 jobs:
   reminder:
     runs-on: ubuntu-latest
-  env:
-      TZ: Asia/Shanghai 
+    # 👇 关键：设置时区为北京时间，解决日期显示不对的问题
+    env:
+      TZ: Asia/Shanghai
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
+      # 👇 可选：调试用，显示当前时间和时区
+      - name: Check timezone
+        run: |
+          echo "Current date: $(date)"
+          echo "Timezone: $(date +%Z)"
+
       - name: Run medicine reminder
         env:
-        
           YX_SENDER_EMAIL: ${{ secrets.YX_SENDER_EMAIL }}
           YX_SENDER_PASSWORD: ${{ secrets.YX_SENDER_PASSWORD }}
           YX_RECEIVER_EMAIL: ${{ secrets.YX_RECEIVER_EMAIL }}
           YX_RECORD_DATE: ${{ secrets.YX_RECORD_DATE }}
         run: python medicine_reminder.py
-
