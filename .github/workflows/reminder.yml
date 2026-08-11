@@ -9,7 +9,8 @@ on:
 jobs:
   reminder:
     runs-on: ubuntu-latest
-    
+  env:
+      TZ: Asia/Shanghai 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,6 +22,7 @@ jobs:
       
       - name: Run medicine reminder
         env:
+        
           YX_SENDER_EMAIL: ${{ secrets.YX_SENDER_EMAIL }}
           YX_SENDER_PASSWORD: ${{ secrets.YX_SENDER_PASSWORD }}
           YX_RECEIVER_EMAIL: ${{ secrets.YX_RECEIVER_EMAIL }}
