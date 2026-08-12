@@ -28,7 +28,7 @@ ALERT_THRESHOLD = 10
 
 # 📅 药品记录日期（买了新药后，改成今天的日期，push 到仓库即可）
 # 格式：YYYY-MM-DD
-RECORD_DATE = "2026-06-12"
+RECORD_DATE = "2026-08-12"
 
 # 药品数据（请根据实际情况修改）
 # 买了新药后，只需修改上面的 RECORD_DATE，无需改下面
