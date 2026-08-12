@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/30966880/README.md)
 # 💊 药品库存提醒
 
 每天自动检查药品剩余天数，当有药品库存不足时，自动发送邮件提醒购买。
