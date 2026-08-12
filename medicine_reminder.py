@@ -13,6 +13,7 @@ GitHub Actions / 青龙面板 — 药品库存提醒脚本
 3. 买了新药后，修改下方 RECORD_DATE 为今天的日期，push 到仓库即可
 """
 
+
 import os
 import sys
 import smtplib
