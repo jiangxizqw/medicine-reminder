@@ -33,14 +33,14 @@ RECORD_DATE = "2026-06-12"
 # 药品数据（请根据实际情况修改）
 # 买了新药后，只需修改上面的 RECORD_DATE，无需改下面
 MEDICINES = [
-    {"name": "盐酸沙格雷酯片",     "initial_days": 60, "usage": "每日3次，一次1片", "note": ""},
-    {"name": "阿司匹林肠溶片",     "initial_days": 60, "usage": "每日1次，一次1片", "note": "刺激胃部，导致咳嗽，备点胃药"},
-    {"name": "阿托伐汀钙片",       "initial_days": 60, "usage": "每日1次，一次1片", "note": ""},
-    {"name": "阿卡波糖片",         "initial_days": 60, "usage": "每日3次，一次1片", "note": "饭前吃"},
-    {"name": "盐酸二甲双胍片",     "initial_days": 60, "usage": "每日1次，一次1片", "note": ""},
+    {"name": "盐酸沙格雷酯片",     "initial_days": 78, "usage": "每日3次，一次1片", "note": ""},
+    {"name": "阿司匹林肠溶片",     "initial_days": 80, "usage": "每日1次，一次1片", "note": "刺激胃部，导致咳嗽，备点胃药"},
+    {"name": "阿托伐汀钙片",       "initial_days": 75, "usage": "每日1次，一次1片", "note": ""},
+    {"name": "阿卡波糖片",         "initial_days": 70, "usage": "每日3次，一次1片", "note": "饭前吃"},
+    {"name": "盐酸二甲双胍片",     "initial_days": 70, "usage": "每日1次，一次1片", "note": ""},
     {"name": "硝苯地平控释片",     "initial_days": 60, "usage": "每日1次，一次1片", "note": ""},
-    {"name": "沙库巴曲缬沙坦钠片", "initial_days": 60, "usage": "每日1次，一次1片", "note": ""},
-   #{"name": "-------", "initial_days": 60, "usage": "每日1次，一次1片", "note": ""},
+    {"name": "沙库巴曲缬沙坦钠片", "initial_days": 36, "usage": "每日1次，一次1片", "note": ""},
+    {"name": "奥美拉唑肠溶胶囊",   "initial_days": 56, "usage": "每日1次，一次1片", "note": "胃药，饭前吃"},
    #{"name": "-------", "initial_days": 60, "usage": "每日1次，一次1片", "note": ""},
 ]
 
