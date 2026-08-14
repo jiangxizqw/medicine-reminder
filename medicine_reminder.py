@@ -3,10 +3,10 @@
 """
 GitHub Actions / 青龙面板 — 药品库存提醒脚本
 功能：
-  1. 每天检查药品剩余天数，发送药品清单邮件
-  2. 药品清单发送时，可选同步发送医保支付提醒邮件
-  3. 医保提醒不允许单独发送
-
+  1. 支持多次购买记录，自动累加计算总剩余天数
+  2. 每天检查药品剩余天数，发送药品清单邮件
+  3. 药品清单发送时，可选同步发送医保支付提醒邮件
+  4. 医保提醒不允许单独发送
 
 使用方法：
 1. 将本脚本放入仓库根目录（GitHub Actions）或 /ql/scripts/（青龙）
@@ -14,7 +14,7 @@ GitHub Actions / 青龙面板 — 药品库存提醒脚本
    - YX_SENDER_EMAIL    : 发件人QQ邮箱
    - YX_SENDER_PASSWORD : QQ邮箱授权码
    - YX_RECEIVER_EMAIL  : 收件人邮箱
-3. 买了新药后，修改下方 RECORD_DATE 为今天的日期，push 到仓库即可
+3. 买了新药后，在对应药品的 purchases 列表末尾添加天数即可
 """
 
 import os
@@ -27,17 +27,17 @@ from datetime import datetime, date
 
 # ==================== 用户配置区域 ====================
 
-# 📅 药品记录日期（买了新药后，改成今天的日期，push 到仓库即可）
-# 格式：YYYY-MM-DD
+# 📅 药品统一记录日期（第一次开始记录/购药的日期，格式 YYYY-MM-DD）
+# 买了新药后不需要改这个日期，只需在对应药品 purchases 里加数字即可
 RECORD_DATE = "2026-08-12"
 
 # ⚠️ 提醒阈值：剩余天数小于此值时标红提醒
-ALERT_THRESHOLD = 10
+ALERT_THRESHOLD = 7
 
 # 📧 邮件发送模式
-# 1 = 只有药品不足时才发送药品清单邮件 
+# 1 = 只有药品不足时才发送药品清单邮件
 # 0 = 每天不管药品是否充足，都发送药品清单邮件
-ALWAYS_SEND_MEDICINE = 1
+ALWAYS_SEND_MEDICINE = 0
 
 # 📧 是否同步发送医保支付提醒邮件
 # 1 = 药品清单邮件发送时，同步发送医保提醒邮件
@@ -46,15 +46,58 @@ ALWAYS_SEND_MEDICINE = 1
 ENABLE_INSURANCE_MAIL = 1
 
 # 药品数据（请根据实际情况修改）
+# purchases: 每次购买的天数列表，可以写多个数字
+# 买了新药后，直接在列表末尾追加天数即可，如 [78, 30, 60]
+# 总剩余 = 所有购买天数之和 - 从 RECORD_DATE 到今天已过去的天数
 MEDICINES = [
-      {"name": "盐酸沙格雷酯片",     "initial_days": 78, "usage": "每日3次，一次1片", "note": ""},
-    {"name": "阿司匹林肠溶片",     "initial_days": 80, "usage": "每日1次，一次1片", "note": "刺激胃部，导致咳嗽，备点胃药"},
-    {"name": "阿托伐汀钙片",       "initial_days": 75, "usage": "每日1次，一次1片", "note": ""},
-    {"name": "阿卡波糖片",         "initial_days": 70, "usage": "每日3次，一次1片", "note": "饭前吃"},
-    {"name": "盐酸二甲双胍片",     "initial_days": 70, "usage": "每日1次，一次1片", "note": ""},
-    {"name": "硝苯地平控释片",     "initial_days": 60, "usage": "每日1次，一次1片", "note": ""},
-    {"name": "沙库巴曲缬沙坦钠片", "initial_days": 36, "usage": "每日1次，一次1片", "note": ""},
-    {"name": "奥美拉唑肠溶胶囊",   "initial_days": 56, "usage": "每日1次，一次1片", "note": "胃药，饭前吃"},
+    {
+        "name": "盐酸沙格雷酯片",
+        "purchases": [78],
+        "usage": "每日3次，一次1片",
+        "note": ""
+    },
+    {
+        "name": "阿司匹林肠溶片",
+        "purchases": [80],
+        "usage": "每日1次，一次1片",
+        "note": "刺激胃部，导致咳嗽，备点胃药"
+    },
+    {
+        "name": "阿托伐汀钙片",
+        "purchases": [75],
+        "usage": "每日1次，一次1片",
+        "note": ""
+    },
+    {
+        "name": "阿卡波糖片",
+        "purchases": [70],
+        "usage": "每日3次，一次1片",
+        "note": "饭前吃"
+    },
+    {
+        "name": "盐酸二甲双胍片",
+        "purchases": [70],
+        "usage": "每日1次，一次1片",
+        "note": ""
+    },
+    {
+        "name": "硝苯地平控释片",
+        "purchases": [60],
+        "usage": "每日1次，一次1片",
+        "note": ""
+    },
+    {
+        "name": "沙库巴曲缬沙坦钠片",
+        "purchases": [36],
+        "usage": "每日1次，一次1片",
+        "note": ""
+    },
+    {
+        "name": "奥美拉唑肠溶胶囊",
+        "purchases": [56],
+        "usage": "每日1次，一次1片",
+        "note": "胃药，饭前吃"
+    },
 ]
 
 # 邮件配置（从环境变量读取）
@@ -71,9 +114,12 @@ def log(msg):
     print(f"[{now}] {msg}")
     sys.stdout.flush()
 
-def calculate_remaining_days(initial_days, record_date):
+def calculate_remaining(med):
+    """计算某药品总剩余天数"""
+    record_date = datetime.strptime(RECORD_DATE, "%Y-%m-%d").date()
     days_passed = (date.today() - record_date).days
-    remaining = initial_days - days_passed
+    total_purchased = sum(med["purchases"])
+    remaining = total_purchased - days_passed
     return max(0, remaining)
 
 def send_email(subject, html_content):
@@ -106,9 +152,9 @@ def send_email(subject, html_content):
 
 # ==================== 药品清单邮件 ====================
 
-def build_medicine_html(medicines_result, record_date):
+def build_medicine_html(medicines_result):
     today_str = date.today().strftime("%Y年%m月%d日")
-    record_str = record_date.strftime("%Y年%m月%d日")
+    record_str = datetime.strptime(RECORD_DATE, "%Y-%m-%d").date().strftime("%Y年%m月%d日")
     low_count = sum(1 for m in medicines_result if m["remaining"] < ALERT_THRESHOLD)
     total_count = len(medicines_result)
 
@@ -118,6 +164,8 @@ def build_medicine_html(medicines_result, record_date):
         name = med["name"]
         usage = med["usage"]
         note = med["note"] if med["note"] else "—"
+        purchase_list = " + ".join([str(d) + "天" for d in med["purchases"]])
+        total_days = sum(med["purchases"])
 
         if remaining < 7:
             status_color, status_bg, status_text = "#C62828", "#FFEBEE", "⚠️ 急需购买"
@@ -128,13 +176,15 @@ def build_medicine_html(medicines_result, record_date):
 
         rows_html += f"""
         <tr style="border-bottom:1px solid #E0E0E0;">
-            <td style="padding:12px 16px;font-size:14px;color:#333;">{name}</td>
-            <td style="padding:12px 16px;font-size:13px;color:#666;">{usage}</td>
-            <td style="padding:12px 16px;font-size:14px;font-weight:bold;color:{status_color};text-align:center;">{remaining} 天</td>
-            <td style="padding:12px 16px;font-size:12px;color:#666;">{note}</td>
-            <td style="padding:12px 16px;text-align:center;">
+            <td style="padding:12px 16px;font-size:14px;color:#333;white-space:nowrap;">{name}</td>
+            <td style="padding:12px 16px;font-size:13px;color:#666;white-space:nowrap;">{usage}</td>
+            <td style="padding:12px 16px;font-size:12px;color:#666;text-align:center;white-space:nowrap;">{purchase_list}</td>
+            <td style="padding:12px 16px;font-size:12px;color:#888;text-align:center;white-space:nowrap;">{total_days}天</td>
+            <td style="padding:12px 16px;font-size:16px;font-weight:bold;color:{status_color};text-align:center;white-space:nowrap;">{remaining} 天</td>
+            <td style="padding:12px 16px;text-align:center;white-space:nowrap;">
                 <span style="display:inline-block;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:500;background:{status_bg};color:{status_color};">{status_text}</span>
             </td>
+            <td style="padding:12px 16px;font-size:12px;color:#666;">{note}</td>
         </tr>
         """
 
@@ -145,7 +195,7 @@ def build_medicine_html(medicines_result, record_date):
     <body style="margin:0;padding:0;background:#F5F5F5;font-family:'Microsoft YaHei','PingFang SC',sans-serif;">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F5F5;">
             <tr><td align="center" style="padding:24px 16px;">
-                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:600px;width:100%;">
+                <table width="700" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:700px;width:100%;">
                     <tr><td style="background:#2D2D2D;padding:24px 32px;text-align:center;">
                         <div style="font-size:22px;font-weight:bold;color:#FFFFFF;">💊 药品库存提醒</div>
                         <div style="font-size:13px;color:#AAAAAA;margin-top:6px;">{today_str}</div>
@@ -159,7 +209,7 @@ def build_medicine_html(medicines_result, record_date):
                                 请及时购买补充。
                             </div>
                             <div style="font-size:13px;color:#888;margin-top:8px;">
-                                📅 药品记录日期：<strong>{record_str}</strong>
+                                📅 统一记录日期：<strong>{record_str}</strong>（所有药品从此日期开始计算）
                             </div>
                         </div>
                     </td></tr>
@@ -167,11 +217,13 @@ def build_medicine_html(medicines_result, record_date):
                         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                             <thead>
                                 <tr style="background:#F8F8F8;border-bottom:2px solid #E0E0E0;">
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;">药品名</th>
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;">用法用量</th>
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;">剩余天数</th>
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;">注意事项</th>
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;">状态</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;white-space:nowrap;">药品名</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;white-space:nowrap;">用法用量</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;white-space:nowrap;">购买记录</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;white-space:nowrap;">累计购买</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;white-space:nowrap;">总剩余</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;white-space:nowrap;">状态</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;white-space:nowrap;">注意事项</th>
                                 </tr>
                             </thead>
                             <tbody>{rows_html}</tbody>
@@ -180,8 +232,8 @@ def build_medicine_html(medicines_result, record_date):
                     <tr><td style="padding:0 32px 24px;">
                         <div style="border-top:1px solid #EEEEEE;padding-top:16px;font-size:12px;color:#999;line-height:1.8;">
                             <div>💡 本邮件由 GitHub Actions 自动发送，每天检查一次药品库存。</div>
-                            <div>📅 买了新药后，修改脚本中的 RECORD_DATE 为今天的日期，push 到仓库即可。</div>
-                            <div>🔧 当前记录日期：{record_str}</div>
+                            <div>📦 买了新药后，直接在对应药品的 purchases 列表末尾添加天数即可，如 [78, 30, 60]。</div>
+                            <div>🔢 计算方式：总剩余 = 所有购买天数之和 - 从记录日期到今天已过去的天数。</div>
                         </div>
                     </td></tr>
                 </table>
@@ -192,19 +244,18 @@ def build_medicine_html(medicines_result, record_date):
     """
     return html
 
-def send_medicine_mail(medicines_result, record_date):
+def send_medicine_mail(medicines_result):
     """发送药品清单邮件，返回是否发送成功"""
     low_count = sum(1 for m in medicines_result if m["remaining"] < ALERT_THRESHOLD)
 
-    # 判断是否需要发送药品清单邮件
     if ALWAYS_SEND_MEDICINE == 1 and low_count == 0:
         log("📧 所有药品库存充足，且 ALWAYS_SEND_MEDICINE=1，不发送药品清单邮件。")
-        return False  # 未发送
+        return False
 
     subject = f"【药品提醒】有{low_count}种药品库存不足，请及时购买" if low_count > 0 else "【药品日报】今日药品库存情况"
-    html = build_medicine_html(medicines_result, record_date)
+    html = build_medicine_html(medicines_result)
     success = send_email(subject, html)
-    return success  # True=发送成功, False=发送失败
+    return success
 
 # ==================== 医保支付提醒邮件 ====================
 
@@ -219,13 +270,11 @@ def build_insurance_html():
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F5F5;">
             <tr><td align="center" style="padding:24px 16px;">
                 <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:600px;width:100%;">
-
                     <tr><td style="background:#C62828;padding:28px 32px;text-align:center;">
                         <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
                         <div style="font-size:24px;font-weight:bold;color:#FFFFFF;letter-spacing:2px;">医 保 支 付 提 醒</div>
                         <div style="font-size:13px;color:#FFCDD2;margin-top:6px;">{today_str}</div>
                     </td></tr>
-
                     <tr><td style="padding:32px;">
                         <div style="background:#FFEBEE;border:2px solid #EF5350;border-radius:12px;padding:24px;text-align:center;">
                             <div style="font-size:20px;font-weight:bold;color:#C62828;margin-bottom:16px;line-height:1.6;">
@@ -237,31 +286,17 @@ def build_insurance_html():
                             </div>
                         </div>
                     </td></tr>
-
                     <tr><td style="padding:0 32px 24px;">
                         <div style="background:#E8F5E9;border-radius:10px;padding:20px 24px;">
                             <div style="font-size:16px;font-weight:bold;color:#2E7D32;margin-bottom:12px;">💰 为什么要用医保卡？</div>
                             <div style="font-size:14px;color:#333;line-height:2;">
-                                <div style="display:flex;align-items:center;margin-bottom:8px;">
-                                    <span style="display:inline-block;width:6px;height:6px;background:#2E7D32;border-radius:50%;margin-right:10px;"></span>
-                                    医保卡可享受<strong style="color:#2E7D32;">医保报销</strong>，大幅降低自费金额
-                                </div>
-                                <div style="display:flex;align-items:center;margin-bottom:8px;">
-                                    <span style="display:inline-block;width:6px;height:6px;background:#2E7D32;border-radius:50%;margin-right:10px;"></span>
-                                    微信支付属于<strong style="color:#C62828;">全额自费</strong>，无法享受任何报销
-                                </div>
-                                <div style="display:flex;align-items:center;margin-bottom:8px;">
-                                    <span style="display:inline-block;width:6px;height:6px;background:#2E7D32;border-radius:50%;margin-right:10px;"></span>
-                                    窗口刷医保卡，系统自动计算报销比例，<strong style="color:#2E7D32;">省时省钱</strong>
-                                </div>
-                                <div style="display:flex;align-items:center;">
-                                    <span style="display:inline-block;width:6px;height:6px;background:#2E7D32;border-radius:50%;margin-right:10px;"></span>
-                                    长期用药累积下来，医保报销能省下<strong style="color:#2E7D32;">大量费用</strong>
-                                </div>
+                                <div style="margin-bottom:8px;">✅ 医保卡可享受<strong style="color:#2E7D32;">医保报销</strong>，大幅降低自费金额</div>
+                                <div style="margin-bottom:8px;">❌ 微信支付属于<strong style="color:#C62828;">全额自费</strong>，无法享受任何报销</div>
+                                <div style="margin-bottom:8px;">✅ 窗口刷医保卡，系统自动计算报销比例，<strong style="color:#2E7D32;">省时省钱</strong></div>
+                                <div>✅ 长期用药累积下来，医保报销能省下<strong style="color:#2E7D32;">大量费用</strong></div>
                             </div>
                         </div>
                     </td></tr>
-
                     <tr><td style="padding:0 32px 24px;">
                         <div style="background:#FFF8E1;border-left:4px solid #FFB300;padding:16px 20px;border-radius:0 8px 8px 0;">
                             <div style="font-size:15px;font-weight:bold;color:#333;margin-bottom:8px;">📋 正确购药流程</div>
@@ -273,16 +308,14 @@ def build_insurance_html():
                             </div>
                         </div>
                     </td></tr>
-
                     <tr><td style="padding:0 32px 24px;">
                         <div style="border-top:1px solid #EEEEEE;padding-top:16px;text-align:center;">
                             <div style="font-size:13px;color:#999;line-height:1.8;">
-                                本邮件由 GitHub Actions 自动发送，与药品清单邮件同步发送。<br>
+                                本邮件与药品清单邮件同步发送，不允许单独发送。<br>
                                 如有疑问，请咨询当地医保局或医院收费窗口。
                             </div>
                         </div>
                     </td></tr>
-
                 </table>
             </td></tr>
         </table>
@@ -307,18 +340,10 @@ def main():
     log("=" * 50)
     log("🚀 药品库存提醒脚本启动")
     log(f"📅 今天: {date.today().strftime('%Y-%m-%d')}")
+    log(f"📦 统一记录日期: {RECORD_DATE}")
     log(f"⚠️  提醒阈值: {ALERT_THRESHOLD} 天")
     log(f"📧 ALWAYS_SEND_MEDICINE: {ALWAYS_SEND_MEDICINE} (1=不足才发, 0=每天发)")
     log(f"📧 ENABLE_INSURANCE_MAIL: {ENABLE_INSURANCE_MAIL} (1=同步发送医保邮件)")
-    log("⚠️  医保提醒不允许单独发送，必须依附于药品清单邮件")
-
-    try:
-        record_date = datetime.strptime(RECORD_DATE, "%Y-%m-%d").date()
-    except ValueError:
-        log(f"❌ RECORD_DATE 格式错误: '{RECORD_DATE}'，应为 YYYY-MM-DD")
-        return
-
-    log(f"📦 药品记录日期: {record_date.strftime('%Y-%m-%d')}")
     log("=" * 50)
 
     # 计算所有药品剩余天数
@@ -326,13 +351,14 @@ def main():
     low_medicines = []
 
     for med in MEDICINES:
-        remaining = calculate_remaining_days(med["initial_days"], record_date)
+        remaining = calculate_remaining(med)
         med_copy = med.copy()
         med_copy["remaining"] = remaining
         medicines_result.append(med_copy)
 
         status = "⚠️ 不足" if remaining < ALERT_THRESHOLD else "✅ 正常"
-        log(f"  {med['name']}: 剩余 {remaining} 天 [{status}]")
+        total = sum(med["purchases"])
+        log(f"  {med['name']}: 累计购买 {total} 天 → 剩余 {remaining} 天 [{status}]")
 
         if remaining < ALERT_THRESHOLD:
             low_medicines.append(med_copy)
@@ -341,13 +367,13 @@ def main():
 
     # 第一步：发送药品清单邮件
     log("📧 第一步：发送药品清单邮件...")
-    medicine_sent = send_medicine_mail(medicines_result, record_date)
+    medicine_sent = send_medicine_mail(medicines_result)
 
     # 第二步：发送医保提醒邮件（仅在药品清单邮件已发送的前提下）
     log("📧 第二步：发送医保支付提醒邮件...")
     if not medicine_sent:
         log("⚠️ 药品清单邮件未发送，根据规则，医保提醒邮件也不发送（不允许单独发送）。")
-        insurance_sent = True  # 视为成功（因为规则上不需要发）
+        insurance_sent = True
     else:
         insurance_sent = send_insurance_mail()
 
