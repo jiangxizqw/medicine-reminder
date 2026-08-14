@@ -7,6 +7,7 @@ GitHub Actions / 青龙面板 — 药品库存提醒脚本
   2. 药品清单发送时，可选同步发送医保支付提醒邮件
   3. 医保提醒不允许单独发送
 
+
 使用方法：
 1. 将本脚本放入仓库根目录（GitHub Actions）或 /ql/scripts/（青龙）
 2. 在仓库 Settings → Secrets 中添加：
