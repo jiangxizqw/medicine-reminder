@@ -4,7 +4,8 @@
 GitHub Actions / 青龙面板 — 药品库存提醒脚本
 功能：
   1. 每天检查药品剩余天数，发送药品清单邮件
-  2. 每次运行发送医保支付提醒邮件
+  2. 药品清单发送时，可选同步发送医保支付提醒邮件
+  3. 医保提醒不允许单独发送
 
 使用方法：
 1. 将本脚本放入仓库根目录（GitHub Actions）或 /ql/scripts/（青龙）
@@ -35,16 +36,17 @@ ALERT_THRESHOLD = 10
 # 📧 邮件发送模式
 # 1 = 只有药品不足时才发送药品清单邮件（原来的逻辑）
 # 0 = 每天不管药品是否充足，都发送药品清单邮件
-ALWAYS_SEND_MEDICINE = 1
+ALWAYS_SEND_MEDICINE = 0
 
-# 📧 是否发送医保支付提醒邮件
-# 1 = 每次运行都发送医保提醒邮件
+# 📧 是否同步发送医保支付提醒邮件
+# 1 = 药品清单邮件发送时，同步发送医保提醒邮件
 # 0 = 不发送医保提醒邮件
+# ⚠️ 注意：医保提醒不允许单独发送，必须依附于药品清单邮件
 ENABLE_INSURANCE_MAIL = 1
 
 # 药品数据（请根据实际情况修改）
 MEDICINES = [
-     {"name": "盐酸沙格雷酯片",     "initial_days": 78, "usage": "每日3次，一次1片", "note": ""},
+      {"name": "盐酸沙格雷酯片",     "initial_days": 78, "usage": "每日3次，一次1片", "note": ""},
     {"name": "阿司匹林肠溶片",     "initial_days": 80, "usage": "每日1次，一次1片", "note": "刺激胃部，导致咳嗽，备点胃药"},
     {"name": "阿托伐汀钙片",       "initial_days": 75, "usage": "每日1次，一次1片", "note": ""},
     {"name": "阿卡波糖片",         "initial_days": 70, "usage": "每日3次，一次1片", "note": "饭前吃"},
@@ -190,16 +192,18 @@ def build_medicine_html(medicines_result, record_date):
     return html
 
 def send_medicine_mail(medicines_result, record_date):
-    """发送药品清单邮件"""
+    """发送药品清单邮件，返回是否发送成功"""
     low_count = sum(1 for m in medicines_result if m["remaining"] < ALERT_THRESHOLD)
 
+    # 判断是否需要发送药品清单邮件
     if ALWAYS_SEND_MEDICINE == 1 and low_count == 0:
-        log("✅ 所有药品库存充足，且 ALWAYS_SEND_MEDICINE=1，不发送药品邮件。")
-        return True
+        log("📧 所有药品库存充足，且 ALWAYS_SEND_MEDICINE=1，不发送药品清单邮件。")
+        return False  # 未发送
 
     subject = f"【药品提醒】有{low_count}种药品库存不足，请及时购买" if low_count > 0 else "【药品日报】今日药品库存情况"
     html = build_medicine_html(medicines_result, record_date)
-    return send_email(subject, html)
+    success = send_email(subject, html)
+    return success  # True=发送成功, False=发送失败
 
 # ==================== 医保支付提醒邮件 ====================
 
@@ -215,14 +219,12 @@ def build_insurance_html():
             <tr><td align="center" style="padding:24px 16px;">
                 <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:600px;width:100%;">
 
-                    <!-- 头部警告色 -->
                     <tr><td style="background:#C62828;padding:28px 32px;text-align:center;">
                         <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
                         <div style="font-size:24px;font-weight:bold;color:#FFFFFF;letter-spacing:2px;">医 保 支 付 提 醒</div>
                         <div style="font-size:13px;color:#FFCDD2;margin-top:6px;">{today_str}</div>
                     </td></tr>
 
-                    <!-- 核心警告 -->
                     <tr><td style="padding:32px;">
                         <div style="background:#FFEBEE;border:2px solid #EF5350;border-radius:12px;padding:24px;text-align:center;">
                             <div style="font-size:20px;font-weight:bold;color:#C62828;margin-bottom:16px;line-height:1.6;">
@@ -235,7 +237,6 @@ def build_insurance_html():
                         </div>
                     </td></tr>
 
-                    <!-- 原因说明 -->
                     <tr><td style="padding:0 32px 24px;">
                         <div style="background:#E8F5E9;border-radius:10px;padding:20px 24px;">
                             <div style="font-size:16px;font-weight:bold;color:#2E7D32;margin-bottom:12px;">💰 为什么要用医保卡？</div>
@@ -260,7 +261,6 @@ def build_insurance_html():
                         </div>
                     </td></tr>
 
-                    <!-- 操作指引 -->
                     <tr><td style="padding:0 32px 24px;">
                         <div style="background:#FFF8E1;border-left:4px solid #FFB300;padding:16px 20px;border-radius:0 8px 8px 0;">
                             <div style="font-size:15px;font-weight:bold;color:#333;margin-bottom:8px;">📋 正确购药流程</div>
@@ -273,11 +273,10 @@ def build_insurance_html():
                         </div>
                     </td></tr>
 
-                    <!-- 底部提示 -->
                     <tr><td style="padding:0 32px 24px;">
                         <div style="border-top:1px solid #EEEEEE;padding-top:16px;text-align:center;">
                             <div style="font-size:13px;color:#999;line-height:1.8;">
-                                本邮件由 GitHub Actions 自动发送，每次运行药品提醒时同步发送。<br>
+                                本邮件由 GitHub Actions 自动发送，与药品清单邮件同步发送。<br>
                                 如有疑问，请咨询当地医保局或医院收费窗口。
                             </div>
                         </div>
@@ -309,7 +308,8 @@ def main():
     log(f"📅 今天: {date.today().strftime('%Y-%m-%d')}")
     log(f"⚠️  提醒阈值: {ALERT_THRESHOLD} 天")
     log(f"📧 ALWAYS_SEND_MEDICINE: {ALWAYS_SEND_MEDICINE} (1=不足才发, 0=每天发)")
-    log(f"📧 ENABLE_INSURANCE_MAIL: {ENABLE_INSURANCE_MAIL} (1=发送医保邮件)")
+    log(f"📧 ENABLE_INSURANCE_MAIL: {ENABLE_INSURANCE_MAIL} (1=同步发送医保邮件)")
+    log("⚠️  医保提醒不允许单独发送，必须依附于药品清单邮件")
 
     try:
         record_date = datetime.strptime(RECORD_DATE, "%Y-%m-%d").date()
@@ -338,17 +338,23 @@ def main():
 
     log("-" * 50)
 
-    # 发送药品清单邮件
-    log("📧 开始发送药品清单邮件...")
-    med_success = send_medicine_mail(medicines_result, record_date)
+    # 第一步：发送药品清单邮件
+    log("📧 第一步：发送药品清单邮件...")
+    medicine_sent = send_medicine_mail(medicines_result, record_date)
 
-    # 发送医保支付提醒邮件
-    log("📧 开始发送医保支付提醒邮件...")
-    ins_success = send_insurance_mail()
+    # 第二步：发送医保提醒邮件（仅在药品清单邮件已发送的前提下）
+    log("📧 第二步：发送医保支付提醒邮件...")
+    if not medicine_sent:
+        log("⚠️ 药品清单邮件未发送，根据规则，医保提醒邮件也不发送（不允许单独发送）。")
+        insurance_sent = True  # 视为成功（因为规则上不需要发）
+    else:
+        insurance_sent = send_insurance_mail()
 
     log("-" * 50)
-    if med_success and ins_success:
-        log("🎉 所有邮件发送完成！")
+    if medicine_sent and insurance_sent:
+        log("🎉 所有邮件处理完成！")
+    elif not medicine_sent and insurance_sent:
+        log("📧 药品清单未发送（库存充足），医保提醒同步不发送。")
     else:
         log("⚠️ 部分邮件发送失败，请检查日志。")
     log("=" * 50)
