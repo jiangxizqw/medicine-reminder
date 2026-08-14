@@ -32,12 +32,12 @@ from datetime import datetime, date
 RECORD_DATE = "2026-08-12"
 
 # ⚠️ 提醒阈值：剩余天数小于此值时标红提醒
-ALERT_THRESHOLD = 7
+ALERT_THRESHOLD = 10
 
 # 📧 邮件发送模式
 # 1 = 只有药品不足时才发送药品清单邮件
 # 0 = 每天不管药品是否充足，都发送药品清单邮件
-ALWAYS_SEND_MEDICINE = 0
+ALWAYS_SEND_MEDICINE = 1
 
 # 📧 是否同步发送医保支付提醒邮件
 # 1 = 药品清单邮件发送时，同步发送医保提醒邮件
