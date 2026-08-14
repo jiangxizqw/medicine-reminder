@@ -37,7 +37,7 @@ ALERT_THRESHOLD = 7
 # 📧 邮件发送模式
 # 1 = 只有药品不足时才发送药品清单邮件
 # 0 = 每天不管药品是否充足，都发送药品清单邮件
-ALWAYS_SEND_MEDICINE = 0
+ALWAYS_SEND_MEDICINE = 1
 
 # 📧 是否同步发送医保支付提醒邮件
 # 1 = 药品清单邮件发送时，同步发送医保提醒邮件
@@ -154,7 +154,6 @@ def send_email(subject, html_content):
 
 def build_medicine_html(medicines_result):
     today_str = date.today().strftime("%Y年%m月%d日")
-    record_str = datetime.strptime(RECORD_DATE, "%Y-%m-%d").date().strftime("%Y年%m月%d日")
     low_count = sum(1 for m in medicines_result if m["remaining"] < ALERT_THRESHOLD)
     total_count = len(medicines_result)
 
@@ -164,8 +163,6 @@ def build_medicine_html(medicines_result):
         name = med["name"]
         usage = med["usage"]
         note = med["note"] if med["note"] else "—"
-        purchase_list = " + ".join([str(d) + "天" for d in med["purchases"]])
-        total_days = sum(med["purchases"])
 
         if remaining < 7:
             status_color, status_bg, status_text = "#C62828", "#FFEBEE", "⚠️ 急需购买"
@@ -176,12 +173,10 @@ def build_medicine_html(medicines_result):
 
         rows_html += f"""
         <tr style="border-bottom:1px solid #E0E0E0;">
-            <td style="padding:12px 16px;font-size:14px;color:#333;white-space:nowrap;">{name}</td>
-            <td style="padding:12px 16px;font-size:13px;color:#666;white-space:nowrap;">{usage}</td>
-            <td style="padding:12px 16px;font-size:12px;color:#666;text-align:center;white-space:nowrap;">{purchase_list}</td>
-            <td style="padding:12px 16px;font-size:12px;color:#888;text-align:center;white-space:nowrap;">{total_days}天</td>
-            <td style="padding:12px 16px;font-size:16px;font-weight:bold;color:{status_color};text-align:center;white-space:nowrap;">{remaining} 天</td>
-            <td style="padding:12px 16px;text-align:center;white-space:nowrap;">
+            <td style="padding:12px 16px;font-size:14px;color:#333;">{name}</td>
+            <td style="padding:12px 16px;font-size:13px;color:#666;">{usage}</td>
+            <td style="padding:12px 16px;font-size:14px;font-weight:bold;color:{status_color};text-align:center;">{remaining} 天</td>
+            <td style="padding:12px 16px;text-align:center;">
                 <span style="display:inline-block;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:500;background:{status_bg};color:{status_color};">{status_text}</span>
             </td>
             <td style="padding:12px 16px;font-size:12px;color:#666;">{note}</td>
@@ -195,7 +190,7 @@ def build_medicine_html(medicines_result):
     <body style="margin:0;padding:0;background:#F5F5F5;font-family:'Microsoft YaHei','PingFang SC',sans-serif;">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F5F5;">
             <tr><td align="center" style="padding:24px 16px;">
-                <table width="700" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:700px;width:100%;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:600px;width:100%;">
                     <tr><td style="background:#2D2D2D;padding:24px 32px;text-align:center;">
                         <div style="font-size:22px;font-weight:bold;color:#FFFFFF;">💊 药品库存提醒</div>
                         <div style="font-size:13px;color:#AAAAAA;margin-top:6px;">{today_str}</div>
@@ -208,22 +203,17 @@ def build_medicine_html(medicines_result):
                                 其中 <strong style="color:#C62828;">{low_count}</strong> 种药品剩余天数不足 <strong>{ALERT_THRESHOLD}</strong> 天，
                                 请及时购买补充。
                             </div>
-                            <div style="font-size:13px;color:#888;margin-top:8px;">
-                                📅 统一记录日期：<strong>{record_str}</strong>（所有药品从此日期开始计算）
-                            </div>
                         </div>
                     </td></tr>
                     <tr><td style="padding:20px 32px;">
                         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                             <thead>
                                 <tr style="background:#F8F8F8;border-bottom:2px solid #E0E0E0;">
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;white-space:nowrap;">药品名</th>
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;white-space:nowrap;">用法用量</th>
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;white-space:nowrap;">购买记录</th>
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;white-space:nowrap;">累计购买</th>
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;white-space:nowrap;">总剩余</th>
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;white-space:nowrap;">状态</th>
-                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;white-space:nowrap;">注意事项</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;">药品名</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;">用法用量</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;">剩余天数</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;">状态</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;">注意事项</th>
                                 </tr>
                             </thead>
                             <tbody>{rows_html}</tbody>
@@ -232,8 +222,7 @@ def build_medicine_html(medicines_result):
                     <tr><td style="padding:0 32px 24px;">
                         <div style="border-top:1px solid #EEEEEE;padding-top:16px;font-size:12px;color:#999;line-height:1.8;">
                             <div>💡 本邮件由 GitHub Actions 自动发送，每天检查一次药品库存。</div>
-                            <div>📦 买了新药后，直接在对应药品的 purchases 列表末尾添加天数即可，如 [78, 30, 60]。</div>
-                            <div>🔢 计算方式：总剩余 = 所有购买天数之和 - 从记录日期到今天已过去的天数。</div>
+                            <div>📦 买了新药后，直接在对应药品的 purchases 列表末尾添加天数即可。</div>
                         </div>
                     </td></tr>
                 </table>
