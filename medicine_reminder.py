@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 GitHub Actions / 青龙面板 — 药品库存提醒脚本
-功能：每天自动检查药品剩余天数，如有药品少于7天，自动发送QQ邮件提醒
+功能：
+  1. 每天检查药品剩余天数，发送药品清单邮件
+  2. 每次运行发送医保支付提醒邮件
 
 使用方法：
 1. 将本脚本放入仓库根目录（GitHub Actions）或 /ql/scripts/（青龙）
@@ -12,7 +14,6 @@ GitHub Actions / 青龙面板 — 药品库存提醒脚本
    - YX_RECEIVER_EMAIL  : 收件人邮箱
 3. 买了新药后，修改下方 RECORD_DATE 为今天的日期，push 到仓库即可
 """
-
 
 import os
 import sys
@@ -24,17 +25,26 @@ from datetime import datetime, date
 
 # ==================== 用户配置区域 ====================
 
-# 提醒阈值：剩余天数小于此值时发送邮件
-ALERT_THRESHOLD = 10
-
 # 📅 药品记录日期（买了新药后，改成今天的日期，push 到仓库即可）
 # 格式：YYYY-MM-DD
 RECORD_DATE = "2026-08-12"
 
+# ⚠️ 提醒阈值：剩余天数小于此值时标红提醒
+ALERT_THRESHOLD = 10
+
+# 📧 邮件发送模式
+# 1 = 只有药品不足时才发送药品清单邮件（原来的逻辑）
+# 0 = 每天不管药品是否充足，都发送药品清单邮件
+ALWAYS_SEND_MEDICINE = 0
+
+# 📧 是否发送医保支付提醒邮件
+# 1 = 每次运行都发送医保提醒邮件
+# 0 = 不发送医保提醒邮件
+ENABLE_INSURANCE_MAIL = 1
+
 # 药品数据（请根据实际情况修改）
-# 买了新药后，只需修改上面的 RECORD_DATE，无需改下面
 MEDICINES = [
-    {"name": "盐酸沙格雷酯片",     "initial_days": 78, "usage": "每日3次，一次1片", "note": ""},
+     {"name": "盐酸沙格雷酯片",     "initial_days": 78, "usage": "每日3次，一次1片", "note": ""},
     {"name": "阿司匹林肠溶片",     "initial_days": 80, "usage": "每日1次，一次1片", "note": "刺激胃部，导致咳嗽，备点胃药"},
     {"name": "阿托伐汀钙片",       "initial_days": 75, "usage": "每日1次，一次1片", "note": ""},
     {"name": "阿卡波糖片",         "initial_days": 70, "usage": "每日3次，一次1片", "note": "饭前吃"},
@@ -42,7 +52,6 @@ MEDICINES = [
     {"name": "硝苯地平控释片",     "initial_days": 60, "usage": "每日1次，一次1片", "note": ""},
     {"name": "沙库巴曲缬沙坦钠片", "initial_days": 36, "usage": "每日1次，一次1片", "note": ""},
     {"name": "奥美拉唑肠溶胶囊",   "initial_days": 56, "usage": "每日1次，一次1片", "note": "胃药，饭前吃"},
-   #{"name": "-------", "initial_days": 60, "usage": "每日1次，一次1片", "note": ""},
 ]
 
 # 邮件配置（从环境变量读取）
@@ -64,7 +73,37 @@ def calculate_remaining_days(initial_days, record_date):
     remaining = initial_days - days_passed
     return max(0, remaining)
 
-def build_email_html(medicines_result, record_date):
+def send_email(subject, html_content):
+    """发送邮件"""
+    if not SENDER_EMAIL or not SENDER_PASSWORD or not RECEIVER_EMAIL:
+        log("❌ 邮件配置不完整，请检查环境变量 YX_SENDER_EMAIL / YX_SENDER_PASSWORD / YX_RECEIVER_EMAIL")
+        return False
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = SENDER_EMAIL
+    msg["To"] = RECEIVER_EMAIL
+
+    msg.attach(MIMEText("请使用支持HTML的邮件客户端查看。", "plain", "utf-8"))
+    msg.attach(MIMEText(html_content, "html", "utf-8"))
+
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context, timeout=30) as server:
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL.split(","), msg.as_string())
+        log(f"✅ 邮件发送成功！收件人: {RECEIVER_EMAIL}")
+        return True
+    except smtplib.SMTPAuthenticationError as e:
+        log(f"❌ 认证错误: {e}")
+        return False
+    except Exception as e:
+        log(f"❌ 邮件发送失败: {e}")
+        return False
+
+# ==================== 药品清单邮件 ====================
+
+def build_medicine_html(medicines_result, record_date):
     today_str = date.today().strftime("%Y年%m月%d日")
     record_str = record_date.strftime("%Y年%m月%d日")
     low_count = sum(1 for m in medicines_result if m["remaining"] < ALERT_THRESHOLD)
@@ -150,38 +189,127 @@ def build_email_html(medicines_result, record_date):
     """
     return html
 
-def send_email(subject, html_content):
-    if not SENDER_EMAIL or not SENDER_PASSWORD or not RECEIVER_EMAIL:
-        log("❌ 邮件配置不完整，请检查环境变量 YX_SENDER_EMAIL / YX_SENDER_PASSWORD / YX_RECEIVER_EMAIL")
-        return False
+def send_medicine_mail(medicines_result, record_date):
+    """发送药品清单邮件"""
+    low_count = sum(1 for m in medicines_result if m["remaining"] < ALERT_THRESHOLD)
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = SENDER_EMAIL
-    msg["To"] = RECEIVER_EMAIL
-
-    msg.attach(MIMEText("药品库存提醒，请使用支持HTML的邮件客户端查看。", "plain", "utf-8"))
-    msg.attach(MIMEText(html_content, "html", "utf-8"))
-
-    try:
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context, timeout=30) as server:
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
-            server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL.split(","), msg.as_string())
-        log(f"✅ 邮件发送成功！收件人: {RECEIVER_EMAIL}")
+    if ALWAYS_SEND_MEDICINE == 1 and low_count == 0:
+        log("✅ 所有药品库存充足，且 ALWAYS_SEND_MEDICINE=1，不发送药品邮件。")
         return True
-    except smtplib.SMTPAuthenticationError as e:
-        log(f"❌ 认证错误，请检查邮箱和授权码。错误: {e}")
-        return False
-    except Exception as e:
-        log(f"❌ 邮件发送失败：{e}")
-        return False
+
+    subject = f"【药品提醒】有{low_count}种药品库存不足，请及时购买" if low_count > 0 else "【药品日报】今日药品库存情况"
+    html = build_medicine_html(medicines_result, record_date)
+    return send_email(subject, html)
+
+# ==================== 医保支付提醒邮件 ====================
+
+def build_insurance_html():
+    today_str = date.today().strftime("%Y年%m月%d日")
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="margin:0;padding:0;background:#F5F5F5;font-family:'Microsoft YaHei','PingFang SC',sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F5F5;">
+            <tr><td align="center" style="padding:24px 16px;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);max-width:600px;width:100%;">
+
+                    <!-- 头部警告色 -->
+                    <tr><td style="background:#C62828;padding:28px 32px;text-align:center;">
+                        <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
+                        <div style="font-size:24px;font-weight:bold;color:#FFFFFF;letter-spacing:2px;">医 保 支 付 提 醒</div>
+                        <div style="font-size:13px;color:#FFCDD2;margin-top:6px;">{today_str}</div>
+                    </td></tr>
+
+                    <!-- 核心警告 -->
+                    <tr><td style="padding:32px;">
+                        <div style="background:#FFEBEE;border:2px solid #EF5350;border-radius:12px;padding:24px;text-align:center;">
+                            <div style="font-size:20px;font-weight:bold;color:#C62828;margin-bottom:16px;line-height:1.6;">
+                                🚫 请勿直接使用微信支付购药！
+                            </div>
+                            <div style="font-size:16px;color:#B71C1C;line-height:2;font-weight:500;">
+                                请务必使用 <span style="color:#C62828;font-size:18px;font-weight:bold;">医保卡</span> 支付<br>
+                                或前往 <span style="color:#C62828;font-size:18px;font-weight:bold;">医院/药店窗口</span> 刷医保卡结算
+                            </div>
+                        </div>
+                    </td></tr>
+
+                    <!-- 原因说明 -->
+                    <tr><td style="padding:0 32px 24px;">
+                        <div style="background:#E8F5E9;border-radius:10px;padding:20px 24px;">
+                            <div style="font-size:16px;font-weight:bold;color:#2E7D32;margin-bottom:12px;">💰 为什么要用医保卡？</div>
+                            <div style="font-size:14px;color:#333;line-height:2;">
+                                <div style="display:flex;align-items:center;margin-bottom:8px;">
+                                    <span style="display:inline-block;width:6px;height:6px;background:#2E7D32;border-radius:50%;margin-right:10px;"></span>
+                                    医保卡可享受<strong style="color:#2E7D32;">医保报销</strong>，大幅降低自费金额
+                                </div>
+                                <div style="display:flex;align-items:center;margin-bottom:8px;">
+                                    <span style="display:inline-block;width:6px;height:6px;background:#2E7D32;border-radius:50%;margin-right:10px;"></span>
+                                    微信支付属于<strong style="color:#C62828;">全额自费</strong>，无法享受任何报销
+                                </div>
+                                <div style="display:flex;align-items:center;margin-bottom:8px;">
+                                    <span style="display:inline-block;width:6px;height:6px;background:#2E7D32;border-radius:50%;margin-right:10px;"></span>
+                                    窗口刷医保卡，系统自动计算报销比例，<strong style="color:#2E7D32;">省时省钱</strong>
+                                </div>
+                                <div style="display:flex;align-items:center;">
+                                    <span style="display:inline-block;width:6px;height:6px;background:#2E7D32;border-radius:50%;margin-right:10px;"></span>
+                                    长期用药累积下来，医保报销能省下<strong style="color:#2E7D32;">大量费用</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </td></tr>
+
+                    <!-- 操作指引 -->
+                    <tr><td style="padding:0 32px 24px;">
+                        <div style="background:#FFF8E1;border-left:4px solid #FFB300;padding:16px 20px;border-radius:0 8px 8px 0;">
+                            <div style="font-size:15px;font-weight:bold;color:#333;margin-bottom:8px;">📋 正确购药流程</div>
+                            <div style="font-size:14px;color:#555;line-height:2;">
+                                1️⃣ 购药时主动出示 <strong>医保卡/医保电子凭证</strong><br>
+                                2️⃣ 告知收银员「<strong>刷医保</strong>」<br>
+                                3️⃣ 确认结算单上显示<strong>医保统筹支付</strong>金额<br>
+                                4️⃣ 仅支付<strong>个人自付</strong>部分
+                            </div>
+                        </div>
+                    </td></tr>
+
+                    <!-- 底部提示 -->
+                    <tr><td style="padding:0 32px 24px;">
+                        <div style="border-top:1px solid #EEEEEE;padding-top:16px;text-align:center;">
+                            <div style="font-size:13px;color:#999;line-height:1.8;">
+                                本邮件由 GitHub Actions 自动发送，每次运行药品提醒时同步发送。<br>
+                                如有疑问，请咨询当地医保局或医院收费窗口。
+                            </div>
+                        </div>
+                    </td></tr>
+
+                </table>
+            </td></tr>
+        </table>
+    </body>
+    </html>
+    """
+    return html
+
+def send_insurance_mail():
+    """发送医保支付提醒邮件"""
+    if ENABLE_INSURANCE_MAIL != 1:
+        log("📧 ENABLE_INSURANCE_MAIL=0，不发送医保提醒邮件。")
+        return True
+
+    subject = "【重要提醒】购药请务必使用医保卡支付，不要微信支付！"
+    html = build_insurance_html()
+    return send_email(subject, html)
+
+# ==================== 主程序 ====================
 
 def main():
     log("=" * 50)
     log("🚀 药品库存提醒脚本启动")
     log(f"📅 今天: {date.today().strftime('%Y-%m-%d')}")
     log(f"⚠️  提醒阈值: {ALERT_THRESHOLD} 天")
+    log(f"📧 ALWAYS_SEND_MEDICINE: {ALWAYS_SEND_MEDICINE} (1=不足才发, 0=每天发)")
+    log(f"📧 ENABLE_INSURANCE_MAIL: {ENABLE_INSURANCE_MAIL} (1=发送医保邮件)")
 
     try:
         record_date = datetime.strptime(RECORD_DATE, "%Y-%m-%d").date()
@@ -192,6 +320,7 @@ def main():
     log(f"📦 药品记录日期: {record_date.strftime('%Y-%m-%d')}")
     log("=" * 50)
 
+    # 计算所有药品剩余天数
     medicines_result = []
     low_medicines = []
 
@@ -209,19 +338,19 @@ def main():
 
     log("-" * 50)
 
-    if low_medicines:
-        log(f"🚨 发现 {len(low_medicines)} 种药品库存不足，准备发送邮件...")
-        subject = f"【药品提醒】有{len(low_medicines)}种药品库存不足，请及时购买"
-        html_content = build_email_html(medicines_result, record_date)
+    # 发送药品清单邮件
+    log("📧 开始发送药品清单邮件...")
+    med_success = send_medicine_mail(medicines_result, record_date)
 
-        success = send_email(subject, html_content)
-        if success:
-            log("🎉 任务完成，邮件已发送！")
-        else:
-            log("⚠️ 任务完成，但邮件发送失败。")
+    # 发送医保支付提醒邮件
+    log("📧 开始发送医保支付提醒邮件...")
+    ins_success = send_insurance_mail()
+
+    log("-" * 50)
+    if med_success and ins_success:
+        log("🎉 所有邮件发送完成！")
     else:
-        log("✅ 所有药品库存充足，无需发送邮件。")
-
+        log("⚠️ 部分邮件发送失败，请检查日志。")
     log("=" * 50)
 
 if __name__ == "__main__":
