@@ -88,13 +88,13 @@ MEDICINES = [
     },
     {
         "name": "沙库巴曲缬沙坦钠片",
-        "purchases": [36],
+        "purchases": [36,30],
         "usage": "每日1次，一次1片",
         "note": ""
     },
     {
         "name": "奥美拉唑肠溶胶囊",
-        "purchases": [56],
+        "purchases": [56,30],
         "usage": "每日1次，一次1片",
         "note": "胃药，饭前吃"
     },
