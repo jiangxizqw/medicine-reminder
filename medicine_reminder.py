@@ -108,7 +108,7 @@ MEDICINES = [
     },
     {
         "name": "骨化三醇软胶囊",
-        "purchases": [56,30],
+        "purchases": [56,16],
         "usage": "每日2次，一次1片",
         "manufacturer": "",
         "note": ""
@@ -122,7 +122,7 @@ MEDICINES = [
     },
     {
         "name": "鲑降钙素鼻喷雾剂",
-        "purchases": [56,30],
+        "purchases": [56,5],
         "usage": "一日或两日一喷",
         "manufacturer": "",
         "note": "不可多用，易水肿，未开封放冰箱存储"
