@@ -37,7 +37,7 @@ ALERT_THRESHOLD = 10
 # 📧 邮件发送模式
 # 1 = 只有药品不足时才发送药品清单邮件
 # 0 = 每天不管药品是否充足，都发送药品清单邮件
-ALWAYS_SEND_MEDICINE = 1
+ALWAYS_SEND_MEDICINE = 0
 
 # 📧 是否同步发送医保支付提醒邮件
 # 1 = 药品清单邮件发送时，同步发送医保提醒邮件
@@ -54,49 +54,78 @@ MEDICINES = [
         "name": "盐酸沙格雷酯片",
         "purchases": [78],
         "usage": "每日3次，一次1片",
+        "manufacturer": "远大医药",
         "note": ""
     },
     {
         "name": "阿司匹林肠溶片",
         "purchases": [80],
         "usage": "每日1次，一次1片",
+        "manufacturer": "石药集团欧意药业",
         "note": "刺激胃部，导致咳嗽，备点胃药"
     },
     {
         "name": "阿托伐汀钙片",
         "purchases": [75],
         "usage": "每日1次，一次1片",
+        "manufacturer": "齐鲁制药",
         "note": ""
     },
     {
         "name": "阿卡波糖片",
         "purchases": [70],
         "usage": "每日3次，一次1片",
+        "manufacturer": "拜耳医药",
         "note": "饭前吃"
     },
     {
         "name": "盐酸二甲双胍片",
         "purchases": [70],
         "usage": "每日1次，一次1片",
+        "manufacturer": "华北制药",
         "note": ""
     },
     {
         "name": "硝苯地平控释片",
         "purchases": [60],
         "usage": "每日1次，一次1片",
+        "manufacturer": "合肥立方",
         "note": ""
     },
     {
         "name": "沙库巴曲缬沙坦钠片",
         "purchases": [36,30],
         "usage": "每日1次，一次1片",
+        "manufacturer": "NOVARTIS",
         "note": ""
     },
     {
         "name": "奥美拉唑肠溶胶囊",
         "purchases": [56,30],
         "usage": "每日1次，一次1片",
+        "manufacturer": "山东罗欣药业",
         "note": "胃药，饭前吃"
+    },
+    {
+        "name": "骨化三醇软胶囊",
+        "purchases": [56,30],
+        "usage": "每日2次，一次1片",
+        "manufacturer": "",
+        "note": ""
+    },
+    {
+        "name": "葡萄糖酸钙片",
+        "purchases": [56,30],
+        "usage": "每日2次，一次1片",
+        "manufacturer": "全威制药",
+        "note": ""
+    },
+    {
+        "name": "鲑降钙素鼻喷雾剂",
+        "purchases": [56,30],
+        "usage": "一日或两日一喷",
+        "manufacturer": "",
+        "note": "不可多用，易水肿，未开封放冰箱存储"
     },
 ]
 
@@ -162,6 +191,7 @@ def build_medicine_html(medicines_result):
         remaining = med["remaining"]
         name = med["name"]
         usage = med["usage"]
+        manufacturer = med.get("manufacturer", "") or "—"
         note = med["note"] if med["note"] else "—"
 
         if remaining < 7:
@@ -179,6 +209,7 @@ def build_medicine_html(medicines_result):
             <td style="padding:12px 16px;text-align:center;">
                 <span style="display:inline-block;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:500;background:{status_bg};color:{status_color};">{status_text}</span>
             </td>
+            <td style="padding:12px 16px;font-size:12px;color:#666;">{manufacturer}</td>
             <td style="padding:12px 16px;font-size:12px;color:#666;">{note}</td>
         </tr>
         """
@@ -213,6 +244,7 @@ def build_medicine_html(medicines_result):
                                     <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;">用法用量</th>
                                     <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;">剩余天数</th>
                                     <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:center;">状态</th>
+                                    <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;">制药公司</th>
                                     <th style="padding:12px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;">注意事项</th>
                                 </tr>
                             </thead>
