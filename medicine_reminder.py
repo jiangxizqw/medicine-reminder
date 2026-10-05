@@ -37,7 +37,7 @@ ALERT_THRESHOLD = 10
 # 📧 邮件发送模式
 # 1 = 只有药品不足时才发送药品清单邮件
 # 0 = 每天不管药品是否充足，都发送药品清单邮件
-ALWAYS_SEND_MEDICINE = 1
+ALWAYS_SEND_MEDICINE = 0
 
 # 📧 是否同步发送医保支付提醒邮件
 # 1 = 药品清单邮件发送时，同步发送医保提醒邮件
@@ -73,28 +73,28 @@ MEDICINES = [
     },
     {
         "name": "阿卡波糖片",
-        "purchases": [70],
+        "purchases": [70，15],
         "usage": "每日3次，一次1片",
         "manufacturer": "拜耳医药",
         "note": "饭前吃"
     },
     {
         "name": "盐酸二甲双胍片",
-        "purchases": [70],
+        "purchases": [70,15],
         "usage": "每日1次，一次1片",
         "manufacturer": "华北制药",
         "note": ""
     },
     {
         "name": "硝苯地平控释片",
-        "purchases": [60],
+        "purchases": [60,30],
         "usage": "每日1次，一次1片",
         "manufacturer": "合肥立方",
         "note": ""
     },
     {
         "name": "沙库巴曲缬沙坦钠片",
-        "purchases": [36,30],
+        "purchases": [36,30,30],
         "usage": "每日1次，一次1片",
         "manufacturer": "NOVARTIS",
         "note": ""
@@ -122,7 +122,7 @@ MEDICINES = [
     },
     {
         "name": "鲑降钙素鼻喷雾剂",
-        "purchases": [56,5],
+        "purchases": [56,5,10],
         "usage": "一日或两日一喷",
         "manufacturer": "",
         "note": "不可多用，易水肿，未开封放冰箱存储"
