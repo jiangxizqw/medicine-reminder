@@ -73,7 +73,7 @@ MEDICINES = [
     },
     {
         "name": "阿卡波糖片",
-        "purchases": [70，15],
+        "purchases": [70,15],
         "usage": "每日3次，一次1片",
         "manufacturer": "拜耳医药",
         "note": "饭前吃"
