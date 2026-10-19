@@ -52,21 +52,21 @@ ENABLE_INSURANCE_MAIL = 1
 MEDICINES = [
     {
         "name": "盐酸沙格雷酯片",
-        "purchases": [78],
+        "purchases": [78,20],
         "usage": "每日3次，一次1片",
         "manufacturer": "远大医药",
         "note": ""
     },
     {
         "name": "阿司匹林肠溶片",
-        "purchases": [80],
+        "purchases": [80,8],
         "usage": "每日1次，一次1片",
         "manufacturer": "石药集团欧意药业",
         "note": "刺激胃部，导致咳嗽，备点胃药"
     },
     {
         "name": "阿托伐汀钙片",
-        "purchases": [75],
+        "purchases": [75,8],
         "usage": "每日1次，一次1片",
         "manufacturer": "齐鲁制药",
         "note": ""
