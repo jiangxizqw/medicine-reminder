@@ -108,14 +108,14 @@ MEDICINES = [
     },
     {
         "name": "维生素D2软胶囊",
-        "purchases": [56,16，25],
+        "purchases": [56,16,25],
         "usage": "每2日1次，一次1片",
         "manufacturer": "大连水产药业",
         "note": ""
     },
     {
         "name": "碳酸钙D3片",
-        "purchases": [56,30，12],
+        "purchases": [56,30,12],
         "usage": "每日1次，一次1片",
         "manufacturer": "钙尔奇",
         "note": ""
