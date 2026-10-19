@@ -107,26 +107,26 @@ MEDICINES = [
         "note": "胃药，饭前吃"
     },
     {
-        "name": "骨化三醇软胶囊",
-        "purchases": [56,16],
-        "usage": "每日2次，一次1片",
-        "manufacturer": "",
+        "name": "维生素D2软胶囊",
+        "purchases": [56,16，25],
+        "usage": "每2日1次，一次1片",
+        "manufacturer": "大连水产药业",
         "note": ""
     },
     {
-        "name": "葡萄糖酸钙片",
-        "purchases": [56,30],
-        "usage": "每日2次，一次1片",
-        "manufacturer": "全威制药",
+        "name": "碳酸钙D3片",
+        "purchases": [56,30，12],
+        "usage": "每日1次，一次1片",
+        "manufacturer": "钙尔奇",
         "note": ""
     },
-    {
-        "name": "鲑降钙素鼻喷雾剂",
-        "purchases": [56,5,10],
-        "usage": "一日或两日一喷",
-        "manufacturer": "",
-        "note": "不可多用，易水肿，未开封放冰箱存储"
-    },
+    # {
+    #     "name": "鲑降钙素鼻喷雾剂",
+    #     "purchases": [56,5,10],
+    #     "usage": "一日或两日一喷",
+    #     "manufacturer": "",
+    #     "note": "不可多用，易水肿，未开封放冰箱存储"
+    # },
 ]
 
 # 邮件配置（从环境变量读取）
