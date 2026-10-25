@@ -32,7 +32,7 @@ from datetime import datetime, date
 RECORD_DATE = "2026-08-12"
 
 # ⚠️ 提醒阈值：剩余天数小于此值时标红提醒
-ALERT_THRESHOLD = 10
+ALERT_THRESHOLD = 8
 
 # 📧 邮件发送模式
 # 1 = 只有药品不足时才发送药品清单邮件
@@ -73,35 +73,35 @@ MEDICINES = [
     },
     {
         "name": "阿卡波糖片",
-        "purchases": [70,15],
+        "purchases": [70,15,20],
         "usage": "每日3次，一次1片",
         "manufacturer": "拜耳医药",
         "note": "饭前吃"
     },
     {
         "name": "盐酸二甲双胍片",
-        "purchases": [70,15],
+        "purchases": [70,14],
         "usage": "每日1次，一次1片",
         "manufacturer": "华北制药",
         "note": ""
     },
     {
         "name": "硝苯地平控释片",
-        "purchases": [60,30],
+        "purchases": [60,30,50],
         "usage": "每日1次，一次1片",
         "manufacturer": "合肥立方",
         "note": ""
     },
     {
         "name": "沙库巴曲缬沙坦钠片",
-        "purchases": [36,30,30],
+        "purchases": [36,30,30,50],
         "usage": "每日1次，一次1片",
         "manufacturer": "NOVARTIS",
         "note": ""
     },
     {
         "name": "奥美拉唑肠溶胶囊",
-        "purchases": [56,30],
+        "purchases": [56,30,16],
         "usage": "每日1次，一次1片",
         "manufacturer": "山东罗欣药业",
         "note": "胃药，饭前吃"
