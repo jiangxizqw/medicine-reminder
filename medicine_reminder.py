@@ -32,7 +32,7 @@ from datetime import datetime, date
 RECORD_DATE = "2026-08-12"
 
 # ⚠️ 提醒阈值：剩余天数小于此值时标红提醒
-ALERT_THRESHOLD = 8
+ALERT_THRESHOLD = 10
 
 # 📧 邮件发送模式
 # 1 = 只有药品不足时才发送药品清单邮件
@@ -73,7 +73,7 @@ MEDICINES = [
     },
     {
         "name": "阿卡波糖片",
-        "purchases": [70,15,20],
+        "purchases": [70,15,10],
         "usage": "每日3次，一次1片",
         "manufacturer": "拜耳医药",
         "note": "饭前吃"
@@ -87,7 +87,7 @@ MEDICINES = [
     },
     {
         "name": "硝苯地平控释片",
-        "purchases": [60,30,50],
+        "purchases": [60,30,18],
         "usage": "每日1次，一次1片",
         "manufacturer": "合肥立方",
         "note": ""
